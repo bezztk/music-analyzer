@@ -1,14 +1,25 @@
 import os
 import tempfile
+import asyncio
 
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from analyzer import analyze
 
 app = FastAPI()
 
+analysis_lock = asyncio.Lock()
+request_slots = asyncio.Semaphore(5)
+
 
 @app.post("/analyze")
 async def analyze_track(file: UploadFile = File(...)):
+    if request_slots.locked():
+        raise HTTPException(
+            status_code=503,
+            detail="Analyzer is busy. Try again later."
+        )
+
+    await request_slots.acquire()
     path = None
 
     try:
@@ -21,7 +32,8 @@ async def analyze_track(file: UploadFile = File(...)):
             while chunk := await file.read(1024 * 1024):
                 temp.write(chunk)
 
-        result = analyze(path)
+        async with analysis_lock:
+            result = await asyncio.to_thread(analyze, path)
 
         return {
             "filename": file.filename,
@@ -29,6 +41,7 @@ async def analyze_track(file: UploadFile = File(...)):
         }
 
     finally:
+        request_slots.release()
         await file.close()
 
         if path and os.path.exists(path):
