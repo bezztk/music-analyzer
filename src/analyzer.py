@@ -8,6 +8,22 @@ MAX_DURATION = 180
 
 MODEL_DIR = Path(__file__).resolve().parent.parent / "models"
 
+# Modelle einmalig initialisieren
+
+maest = es.TensorflowPredictMAEST(
+    graphFilename=str(MODEL_DIR / "discogs-maest-30s-pw-519l-2.pb"),
+    output="PartitionedCall/Identity_7"
+)
+
+musicnn = es.TensorflowPredictMusiCNN(
+    graphFilename=str(MODEL_DIR / "msd-musicnn-1.pb"),
+    output="model/dense/BiasAdd"
+)
+
+effnet = es.TensorflowPredictEffnetDiscogs(
+    graphFilename=str(MODEL_DIR / "discogs-effnet-bs64-1.pb"),
+    output="PartitionedCall:1"
+)
 
 def analyze(path: str):
     timings = {}
@@ -47,34 +63,18 @@ def analyze(path: str):
     start = time.perf_counter()
 
     # MAEST
-    maest = es.TensorflowPredictMAEST(
-        graphFilename=str(MODEL_DIR / "discogs-maest-30s-pw-519l-2.pb"),
-        output="PartitionedCall/Identity_7"
-    )
-
-    maest_embeddings = maest(audio_ml)
-
-    timings["maest"] = round(time.perf_counter() - start, 3)
     start = time.perf_counter()
+    maest_embeddings = maest(audio_ml)
+    timings["maest"] = round(time.perf_counter() - start, 3)
 
     # MusiCNN
-    musicnn = es.TensorflowPredictMusiCNN(
-        graphFilename=str(MODEL_DIR / "msd-musicnn-1.pb"),
-        output="model/dense/BiasAdd"
-    )
-
-    musicnn_embeddings = musicnn(audio_ml)
-
-    timings["musicnn"] = round(time.perf_counter() - start, 3)
     start = time.perf_counter()
+    musicnn_embeddings = musicnn(audio_ml)
+    timings["musicnn"] = round(time.perf_counter() - start, 3)
+
     # Discogs-EffNet
-    effnet = es.TensorflowPredictEffnetDiscogs(
-        graphFilename=str(MODEL_DIR / "discogs-effnet-bs64-1.pb"),
-        output="PartitionedCall:1"
-    )
-
+    start = time.perf_counter()
     effnet_embeddings = effnet(audio_ml)
-
     timings["effnet"] = round(time.perf_counter() - start, 3)
 
     return {
