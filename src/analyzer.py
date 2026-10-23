@@ -1,3 +1,6 @@
-def analyze():
-    print("Analyzing music...")
-    return {"genre": "Pop", "tempo": 120}
+def analyze(audio: bytes):
+    return {
+        "size": len(audio),
+        "genre": "Techno",
+        "bpm": 140
+    }

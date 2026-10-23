@@ -1,10 +1,14 @@
+from fastapi import FastAPI, UploadFile, File
 from analyzer import analyze
 
-def main():
-    print("Welcome to the Music Analyzer!")
-    result = analyze()
-    print("Analysis Result: ", result)
+app = FastAPI()
 
-if __name__ == "__main__":
-    main()
+@app.post("/analyze")
+async def analyze_track(file: UploadFile = File(...)):
+    content = await file.read()
+    result = analyze(content)
 
+    return {
+        "filename": file.filename,
+        "analysis": result
+    }
