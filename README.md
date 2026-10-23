@@ -15,10 +15,10 @@ Analyzes the first **180 seconds** of an audio file.
 ### Setup
 
 ```bash
-git clone https://github.com/bezztk/music-analyzer.git
+sudo git clone https://github.com/bezztk/music-analyzer.git
 cd music-analyzer
-python3 download_models.py
-docker compose up -d --build
+sudo python3 download_models.py
+sudo docker compose up -d --build
 ```
 
 ### API
