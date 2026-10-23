@@ -1,41 +1,36 @@
-# Music Analyzer (extended prototype)
+# Music Analyzer
 
-This is a modular prototype for Essentia-based music analysis. It is intended
-for local/internal use, not for untrusted public upload traffic.
+Self-hosted audio analysis API built with Python, FastAPI and Essentia.
 
-## Setup on Windows (PowerShell)
+Analyzes the first **180 seconds** of an audio file.
 
-```powershell
-python download_models.py
+### Features
+
+* **Genres:** Discogs519, MTG-Jamendo, Electronic
+* **Mood:** MIREX, DEAM, emoMusic and additional classifiers
+* **Instruments:** Instrument and vocal detection
+* **Audio:** BPM, key, loudness, dynamics and spectral features
+* **Diagnostics:** Individual execution times and error reporting
+
+### Setup
+
+```bash
+git clone https://github.com/bezztk/music-analyzer.git
+cd music-analyzer
+python3 download_models.py
 docker compose up -d --build
-docker compose logs -f
 ```
 
-Visit `http://localhost:7200/docs` and upload an audio file to `POST /analyze`.
+### API
 
-The API returns `features`, `predictions`, `timings` (seconds) and `errors`.
-An individual optional model or feature failure is reported in `errors`, without
-hiding successful calculations. Model loading errors also appear there.
-The `total` timing covers the Python analysis, **not** the upload/waiting time.
-The audio is capped at the first 180 seconds during decoding.
+`POST /analyze` — Multipart audio upload (`file`)
 
-## Scope / limitations
+```bash
+curl -F "file=@track.mp3" http://localhost:7200/analyze
+```
 
-* 3 shared embeddings, up to 23 classification heads, signal features.
-* Assumes a single Uvicorn worker. Shared ML model objects are used sequentially.
-* 1 active analysis plus 2 queued; uploads may be parsed by FastAPI first.
-* Many head configurations depend on the Essentia package version. Exact model
-  availability and output tensor names must be tested with the installed version.
-* Some Essentia features are version-dependent. They fail independently and are
-  logged under `errors`. Do not interpret feature errors as zero values.
-* Frame-based spectra are sampled at intervals for speed; these means are
-  estimates, not exhaustive full-resolution analyses.
-* Regression model scores are not calibrated probabilities.
-* No file size limit, user authentication, or upload pre-validation is implemented.
+API documentation: `http://localhost:7200/docs`
 
-## What is not implemented yet
+### Stack
 
-Per-beat loudness, full chord sequence/changes, HPCP aggregation, LUFS/LRA,
-GFCC, Bark bands, pitch salience and detailed dissonance are not included in
-this prototype. They need additional verified Essentia pipelines to avoid
-misleading values. No OpenL3/VGGish embedding is introduced.
+Python 3.11 · FastAPI · Essentia · TensorFlow · Docker

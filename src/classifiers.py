@@ -71,7 +71,7 @@ class Classifiers:
                     model = es.TensorflowPredict2D(
                         graphFilename=str(base.with_suffix(".pb")),
                         input="serving_default_model_Placeholder",
-                        output="PartitionedCall"
+                        output="PartitionedCall",
                     )
                 else:
                     # Official TensorflowPredict2D model metadata specifies node names.

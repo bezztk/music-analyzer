@@ -5,6 +5,7 @@ import essentia.standard as es
 from embeddings import Embeddings
 from classifiers import Classifiers, HEADS
 from features import computations
+from features_extra import computations as extra_computations
 
 MAX_DURATION = 180
 SAMPLE_RATE = 44100
@@ -46,15 +47,15 @@ def analyze(path: str):
     for name, fn in computations(signal).items():
         measure(f"feature_{name}", fn, features)
 
+    for name, fn in extra_computations(signal).items():
+        measure(f"feature_{name}", fn, features)
+
     shared = {}
     for name in ("maest", "musicnn", "effnet"):
-        vector = measure(
-            f"embedding_{name}",
-            lambda n=name: EMBEDDINGS.compute(n, audio_ml),
-            {}
-        )
+        vector = measure(f"embedding_{name}", lambda n=name: EMBEDDINGS.compute(n, audio_ml), {})
         if vector is not None:
             shared[name] = vector
+        if vector is not None:
             ml[f"{name}_shape"] = list(np.asarray(vector).shape)
 
     for key, _group, _filename, embedding_name, _top_k in HEADS:

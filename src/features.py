@@ -17,10 +17,8 @@ def computations(signal):
     *descriptors*, not model-estimated emotional scores.
     """
     def beats():
-        bpm, positions, confidence, estimates, intervals = es.RhythmExtractor2013(method="multifeature")(signal)
-        return {"bpm": _round(bpm), "confidence": _round(confidence),
-                "beat_count": len(positions), "beat_positions_s": [_round(x) for x in positions],
-                "bpm_estimates": [_round(x) for x in estimates]}
+        bpm, _, _, _, _ = es.RhythmExtractor2013(method="multifeature")(signal)
+        return _round(bpm)
 
     def key():
         tonic, scale, strength = es.KeyExtractor(sampleRate=SAMPLE_RATE)(signal)
@@ -40,10 +38,12 @@ def computations(signal):
         return {"complexity": _round(value), "loudness": _round(loudness)}
 
     def silence_rates():
-        return {
-            "below_-20db": _round(es.SilenceRate(thresholds=[-20])(signal)[0]),
-            "below_-40db": _round(es.SilenceRate(thresholds=[-40])(signal)[0]),
-        }
+        detector = es.SilenceRate(thresholds=[10 ** (-20 / 10), 10 ** (-40 / 10)])
+        rates = [detector(frame) for frame in es.FrameGenerator(signal, frameSize=2048, hopSize=1024)]
+        if not rates:
+            return {"below_-20db": None, "below_-40db": None}
+        values = np.mean(np.asarray(rates), axis=0)
+        return {"below_-20db": _round(values[0]), "below_-40db": _round(values[1])}
 
     def onset_rate():
         return _round(es.OnsetRate()(signal)[1])
