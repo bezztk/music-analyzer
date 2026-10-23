@@ -1,7 +1,10 @@
 import time
 from pathlib import Path
 from tracemalloc import start
+import json
+import numpy as np
 
+from essentia import Pool
 import essentia.standard as es
 
 MAX_DURATION = 180
@@ -12,7 +15,7 @@ MODEL_DIR = Path(__file__).resolve().parent.parent / "models"
 
 maest = es.TensorflowPredictMAEST(
     graphFilename=str(MODEL_DIR / "discogs-maest-30s-pw-519l-2.pb"),
-    output="PartitionedCall/Identity_7"
+    output="PartitionedCall/Identity_12"
 )
 
 musicnn = es.TensorflowPredictMusiCNN(
@@ -24,6 +27,17 @@ effnet = es.TensorflowPredictEffnetDiscogs(
     graphFilename=str(MODEL_DIR / "discogs-effnet-bs64-1.pb"),
     output="PartitionedCall:1"
 )
+
+GENRE_MODEL = "genre_discogs519-discogs-maest-30s-pw-519l-1"
+
+genre_classifier = es.TensorflowPredict(
+    graphFilename=str(MODEL_DIR / f"{GENRE_MODEL}.pb"),
+    inputs=["embeddings"],
+    outputs=["PartitionedCall/Identity_1"]
+)
+
+with open(MODEL_DIR / f"{GENRE_MODEL}.json", encoding="utf-8") as file:
+    genre_labels = json.load(file)["classes"]
 
 def analyze(path: str):
     timings = {}
@@ -67,6 +81,27 @@ def analyze(path: str):
     maest_embeddings = maest(audio_ml)
     timings["maest"] = round(time.perf_counter() - start, 3)
 
+    # Discogs-Genre-Klassifikation
+    start = time.perf_counter()
+    pool = Pool()
+    pool.set("embeddings", maest_embeddings)
+
+    predictions = genre_classifier(pool)["PartitionedCall/Identity_1"]
+
+    # Ergebnisse über alle analysierten Abschnitte mitteln
+    predictions = np.asarray(predictions)
+    print(f"Predictions shape: {predictions.shape}", flush=True)
+    scores = predictions.reshape(-1, len(genre_labels)).mean(axis=0)
+
+    genres = {
+        label: round(float(score), 4)
+        for label, score in zip(genre_labels, scores)
+    }
+    genres = dict(
+        sorted(genres.items(), key=lambda item: item[1], reverse=True)[:20]
+    )
+    timings["discogs519"] = round(time.perf_counter() - start, 3)
+
     # MusiCNN
     start = time.perf_counter()
     musicnn_embeddings = musicnn(audio_ml)
@@ -90,5 +125,6 @@ def analyze(path: str):
             "effnet": list(effnet_embeddings.shape)
         },
 
+        "genres": genres,
         "timings": timings
     }
