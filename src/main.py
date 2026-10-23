@@ -12,6 +12,10 @@ _request_guard = threading.Lock()
 _requests = 0
 _analysis_lock = asyncio.Lock()
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
 @app.post("/analyze")
 async def analyze_track(file: UploadFile = File(...)):
     global _requests
