@@ -1,19 +1,20 @@
-import os
-import tempfile
-
 import essentia.standard as es
 
-def analyze(audio: bytes):
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".m4a") as file:
-        file.write(audio)
-        path = file.name
+MAX_DURATION = 180
+SAMPLE_RATE = 44100
 
-    try:
-        signal = es.MonoLoader(filename=path, sampleRate=44100)()
 
-        rhythm = es.RhythmExtractor2013(method="multifeature")
-        bpm, beats, confidence, estimates, intervals = rhythm(signal)
+def analyze(path: str):
+    signal = es.MonoLoader(
+        filename=path,
+        sampleRate=SAMPLE_RATE,
+        endTime=MAX_DURATION
+    )()
 
-        return {"bpm": round(float(bpm),2)}
-    finally:
-        os.remove(path)
+    rhythm = es.RhythmExtractor2013(method="multifeature")
+    bpm, beats, confidence, estimates, intervals = rhythm(signal)
+
+    return {
+        "duration": round(len(signal) / SAMPLE_RATE, 2),
+        "bpm": round(float(bpm), 2)
+    }
